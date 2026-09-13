@@ -80,16 +80,35 @@ export async function POST(request: Request) {
       }
     );
 
-    const uploadData = await uploadResponse.json();
+   const uploadText = await uploadResponse.text();
 
-    if (!uploadResponse.ok || !uploadData.image_id) {
-      console.error("SerpApi image upload error:", uploadData);
+let uploadData: any;
 
-      return Response.json(
-        { error: "Could not upload image to SerpApi." },
-        { status: 500 }
-      );
-    }
+try {
+  uploadData = JSON.parse(uploadText);
+} catch {
+  console.error("SerpApi returned non-JSON response:", uploadText);
+
+  return Response.json(
+    {
+      error: `SerpApi error: ${uploadText}`,
+    },
+    { status: 500 }
+  );
+}
+
+if (!uploadResponse.ok || !uploadData.image_id) {
+  console.error("SerpApi image upload error:", uploadData);
+
+  return Response.json(
+    {
+      error:
+        uploadData.error ||
+        "Could not upload image to SerpApi.",
+    },
+    { status: 500 }
+  );
+}
 
     // Search Google Lens for products
     const searchUrl = new URL(
