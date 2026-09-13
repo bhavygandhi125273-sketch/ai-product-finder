@@ -113,6 +113,7 @@ const [imageFile, setImageFile] = useState<File | null>(null);
 const [products, setProducts] = useState<any[]>([]);
 const [aiResult, setAiResult] = useState<string | null>(null);
 const [loading, setLoading] = useState(false);
+const [latency, setLatency] = useState<number | null>(null);
 
   function handleImageUpload(
     event: React.ChangeEvent<HTMLInputElement>
@@ -125,49 +126,64 @@ const [loading, setLoading] = useState(false);
       setProducts([]);
     }
   }
-
-  async function findProduct() {
+async function findProduct() {
   if (!imageFile) return;
+
+  const startTime = performance.now();
+
+  const timer = setInterval(() => {
+    setLatency((performance.now() - startTime) / 1000);
+  }, 100);
 
   setLoading(true);
   setProducts([]);
   setAiResult(null);
 
   try {
-    const formData = new FormData();
-    formData.append("image", imageFile);
+    // Create separate requests for OpenAI and SerpApi
+    const analyzeFormData = new FormData();
+    analyzeFormData.append("image", imageFile);
 
-    // Step 1: Ask OpenAI to identify the main product
-    const analyzeResponse = await fetch("/api/analyze", {
-      method: "POST",
-      body: formData,
-    });
+    const productsFormData = new FormData();
+    productsFormData.append("image", imageFile);
 
+    // Run OpenAI and SerpApi at the same time
+    const [analyzeResponse, productsResponse] = await Promise.all([
+      fetch("/api/analyze", {
+        method: "POST",
+        body: analyzeFormData,
+      }),
+
+      fetch("/api/products", {
+        method: "POST",
+        body: productsFormData,
+      }),
+    ]);
+
+    // Read both responses
     const analyzeData = await analyzeResponse.json();
+    const productsData = await productsResponse.json();
 
+    // Check OpenAI
     if (!analyzeResponse.ok) {
       throw new Error(
         analyzeData.error || "Could not analyze the image."
       );
     }
 
-    setAiResult(analyzeData.result || null);
-
-    // Step 2: Search for matching products using SerpApi
-    const productsResponse = await fetch("/api/products", {
-      method: "POST",
-      body: formData,
-    });
-
-    const productsData = await productsResponse.json();
-
+    // Check SerpApi
     if (!productsResponse.ok) {
       throw new Error(
         productsData.error || "Could not find products."
       );
     }
 
+    // Show AI identification
+    setAiResult(analyzeData.result || null);
+
+    // Show product results
     setProducts(productsData.products || []);
+
   } catch (error) {
     console.error(error);
 
@@ -179,9 +195,15 @@ const [loading, setLoading] = useState(false);
             : "Sorry, we could not find products for this image.",
       },
     ]);
-  } finally {
-    setLoading(false);
-  }
+} finally {
+  clearInterval(timer);
+
+  const endTime = performance.now();
+  const totalTime = (endTime - startTime) / 1000;
+
+  setLatency(totalTime);
+  setLoading(false);
+}
 }
 
   return (
@@ -427,18 +449,26 @@ const [loading, setLoading] = useState(false);
             {/* PRODUCT RESULTS */}
             <div className="mt-5 rounded-[22px] border border-white/80 bg-white/90 p-5 shadow-[0_20px_60px_rgba(60,55,42,0.10)] backdrop-blur md:p-6">
 
-              <div className="mb-4 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-lg font-semibold">
-                  <span className="text-[#c8a32b]">✦</span>
-                  Similar Products
-                </div>
+             <div className="mb-4 flex items-center justify-between">
+  <div className="flex items-center gap-2 text-lg font-semibold">
+    <span className="text-[#c8a32b]">✦</span>
+    Similar Products
+  </div>
 
-                {products.length > 0 && (
-                  <span className="text-xs text-[#7d817a]">
-                    Top {Math.min(products.length, 5)} matches
-                  </span>
-                )}
-              </div>
+  <div className="flex items-center gap-3">
+    {latency !== null && (
+      <span className="text-xs font-medium text-[#40563d]">
+        Latency: {latency.toFixed(2)}s
+      </span>
+    )}
+
+    {products.length > 0 && (
+      <span className="text-xs text-[#7d817a]">
+        Top {Math.min(products.length, 5)} matches
+      </span>
+    )}
+  </div>
+</div>
 
               <div className="rounded-[17px] bg-[#faf9f5] p-4">
 
