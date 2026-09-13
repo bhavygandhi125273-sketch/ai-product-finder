@@ -189,17 +189,35 @@ const [aiResult, setAiResult] = useState<string | null>(null);
 const [loading, setLoading] = useState(false);
 const [latency, setLatency] = useState<number | null>(null);
 
-  function handleImageUpload(
-    event: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const file = event.target.files?.[0];
+ function handleImageUpload(
+  event: React.ChangeEvent<HTMLInputElement>
+) {
+  const file = event.target.files?.[0];
 
-    if (file) {
-      setImageFile(file);
-      setImage(URL.createObjectURL(file));
-      setProducts([]);
-    }
+  if (!file) return;
+
+  const allowedTypes = [
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+  ];
+
+  if (!allowedTypes.includes(file.type)) {
+    setImage(null);
+    setImageFile(null);
+    setProducts([
+      {
+        error:
+          "Please upload a JPG, PNG, or WebP image.",
+      },
+    ]);
+    return;
   }
+
+  setImageFile(file);
+  setImage(URL.createObjectURL(file));
+  setProducts([]);
+}
 async function findProduct() {
   if (!imageFile) return;
 
