@@ -106,7 +106,81 @@ function MailIcon() {
     </svg>
   );
 }
+async function compressImage(file: File): Promise<File> {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
 
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+
+      const maxSize = 1200;
+
+      let width = img.width;
+      let height = img.height;
+
+      if (width > maxSize || height > maxSize) {
+        const scale = Math.min(
+          maxSize / width,
+          maxSize / height
+        );
+
+        width = Math.round(width * scale);
+        height = Math.round(height * scale);
+      }
+
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+
+      const context = canvas.getContext("2d");
+
+      if (!context) {
+        reject(new Error("Could not process the image."));
+        return;
+      }
+
+      context.drawImage(img, 0, 0, width, height);
+
+      let quality = 0.8;
+
+      const tryCompress = () => {
+        canvas.toBlob(
+          (blob) => {
+            if (!blob) {
+              reject(new Error("Could not compress the image."));
+              return;
+            }
+
+            if (blob.size <= 400 * 1024 || quality <= 0.4) {
+              resolve(
+                new File([blob], "product.jpg", {
+                  type: "image/jpeg",
+                })
+              );
+
+              return;
+            }
+
+            quality -= 0.1;
+            tryCompress();
+          },
+          "image/jpeg",
+          quality
+        );
+      };
+
+      tryCompress();
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error("Could not read the image."));
+    };
+
+    img.src = objectUrl;
+  });
+}
 export default function Home() {
 const [image, setImage] = useState<string | null>(null);
 const [imageFile, setImageFile] = useState<File | null>(null);
@@ -141,11 +215,13 @@ async function findProduct() {
 
   try {
     // Create separate requests for OpenAI and SerpApi
-    const analyzeFormData = new FormData();
-    analyzeFormData.append("image", imageFile);
+   const compressedImage = await compressImage(imageFile);
 
-    const productsFormData = new FormData();
-    productsFormData.append("image", imageFile);
+const analyzeFormData = new FormData();
+analyzeFormData.append("image", compressedImage);
+
+const productsFormData = new FormData();
+productsFormData.append("image", compressedImage);
 
     // Run OpenAI and SerpApi at the same time
     const [analyzeResponse, productsResponse] = await Promise.all([
