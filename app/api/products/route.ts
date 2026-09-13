@@ -149,7 +149,18 @@ if (!uploadResponse.ok || !uploadData.image_id) {
         { status: 500 }
       );
     }
-
+console.log(
+  "SerpApi product summary:",
+  (searchData.visual_matches || []).slice(0, 5).map((product: any) => ({
+    title: product.title,
+    source: product.source,
+    price: product.price,
+    rating: product.rating,
+    reviews: product.reviews,
+    link: product.link,
+    in_stock: product.in_stock,
+  }))
+);
     // Return only the top 5 products
     const topProducts = (
       searchData.visual_matches || []
