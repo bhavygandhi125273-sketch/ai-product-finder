@@ -266,9 +266,7 @@ productsFormData.append("image", compressedImage);
     setProducts([
       {
         error:
-          error instanceof Error
-            ? error.message
-            : "Sorry, we could not find products for this image.",
+  "Sorry, we couldn't find products for this image. Please try another photo.",
       },
     ]);
 } finally {
