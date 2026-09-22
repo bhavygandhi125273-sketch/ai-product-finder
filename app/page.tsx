@@ -282,11 +282,13 @@ productsFormData.append("image", compressedImage);
     console.error(error);
 
     setProducts([
-      {
-        error:
-  "Sorry, we couldn't find products for this image. Please try another photo.",
-      },
-    ]);
+  {
+    error:
+      error instanceof Error
+        ? error.message
+        : "Something went wrong.",
+  },
+]);
 } finally {
   clearInterval(timer);
 
@@ -749,6 +751,7 @@ productsFormData.append("image", compressedImage);
             >
               <LinkedInIcon />
             </a>
+
 
             <a
               href="https://github.com/bhavygandhi125273-sketch"
