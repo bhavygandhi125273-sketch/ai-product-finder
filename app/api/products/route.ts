@@ -144,23 +144,12 @@ if (!uploadResponse.ok || !uploadData.image_id) {
     if (!searchResponse.ok) {
       console.error("SerpApi search error:", searchData);
 
-      return Response.json(
-        { error: "Could not search for products." },
-        { status: 500 }
-      );
-    }
-console.log(
-  "SerpApi product summary:",
-  (searchData.visual_matches || []).slice(0, 5).map((product: any) => ({
-    title: product.title,
-    source: product.source,
-    price: product.price,
-    rating: product.rating,
-    reviews: product.reviews,
-    link: product.link,
-    in_stock: product.in_stock,
-  }))
+     return Response.json(
+  { error: searchData.error || "Could not search for products." },
+  { status: 500 }
 );
+    }
+
     // Return only the top 5 products
     const topProducts = (
       searchData.visual_matches || []
